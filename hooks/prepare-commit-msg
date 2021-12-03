@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Script idea taken and adjusted from:
+# https://betterprogramming.pub/how-to-automatically-add-the-ticket-number-in-git-commit-message-bda5426ded05
+
+FILE="$1"
+BRANCH_NAME=${BRANCH_NAME:-$(git rev-parse --abbrev-ref HEAD)}
+
+# Captures the relevant part of the message + capatilizes first letter
+# Examples:
+#   - "[BILL-999]the commit messsage"  --> "The commit message"
+#   - "[BILL-999] the commit messsage" --> "The commit message"
+#   - "BILL-999 the commit messsage"   --> "The commit message"
+COMMIT_MESSAGE_CLEAN=$(cat $FILE | sed -r 's/^\[?[A-Za-z]+-[0-9]+\]?\s?(.*)/\1/' | sed 's/\.$//' | awk '{$1=toupper(substr($1,0,1))substr($1,2)}1')
+
+# Captures the ticket number from the current Git branch name
+# Examples:
+#   - "BILL-999-improve-customer-flow" --> "BILL-999"
+#   - "improve-customer-flow"          --> ""
+TICKET=$(echo $BRANCH_NAME | grep -Eo '^(\w+/)?(\w+[-_])?[0-9]+' | grep -Eo '(\w+[-])?[0-9]+' | tr ":lower:" ":upper:")
+
+# Concerns a branch that not contains a ticket number
+if [[ $TICKET == "" ]]; then
+    exit 0
+fi
+
+# Update the commit message with a clean prepended message
+echo "$TICKET ${COMMIT_MESSAGE_CLEAN}" > $FILE
